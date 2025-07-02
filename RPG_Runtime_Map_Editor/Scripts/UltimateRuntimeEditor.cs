@@ -18,6 +18,14 @@ public class UltimateRuntimeEditor : MonoBehaviour
     private Color polygonColor = Color.cyan;
     public GameObject playerPrefab; // À glisser dans l'inspecteur
     private GenerateGameFolder generator;
+    private Vector2 mapScroll;
+    private string selectedMapPath = "";
+    private bool GUIElementsVisible = true;
+    bool IsMouseOverGUIRect(Rect rect)
+    {
+        Vector2 mouseGUI = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        return rect.Contains(mouseGUI);
+    }
 
 
 
@@ -25,16 +33,59 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void OnGUI()
     {
-        // ✅ 1. Console affichée en bas si activée
-        if (showConsole)
+        // Corrige le décalage souris GUI dans le build
+        Vector2 guiMouse = Input.mousePosition;
+        guiMouse.y = Screen.height - guiMouse.y; // OnGUI utilise Y inversé
+
+        GUIUtility.ScaleAroundPivot(
+            new Vector2((float)Screen.width / 1980f, (float)Screen.height / 1080f),
+            Vector2.zero
+        );
+GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
+        GUI.matrix = Matrix4x4.identity;
+        // 🔧 Résolution cible fixe (celle de la map, par exemple)
+        Vector2 targetResolution = new Vector2(1980, 1080);
+
+        // 🔄 Matrice de transformation pour corriger le décalage d'écran
+        float scaleX = Screen.width / targetResolution.x;
+        float scaleY = Screen.height / targetResolution.y;
+        GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scaleX, scaleY, 1f));
+        if (isPreviewMode)
         {
-            DrawConsole();
+            GUI.color = new Color(1f, 1f, 1f, 0.12f); // Overlay semi-transparent blanc
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = Color.white;
         }
 
-        // ✅ 2. Interface principale à droite
-        Color originalColor = GUI.backgroundColor;
-        GUI.backgroundColor = new Color(0f, 0f, 0f, 0.6f); // verre noir semi-transparent
+        if (!GUIElementsVisible)
+            return;
 
+        // ✅ 1. Console
+        if (showConsole)
+            DrawConsole();
+
+        // === Sélecteur de maps ===
+        GUILayout.BeginArea(new Rect(10, 10, 240, 300), GUI.skin.box);
+        GUILayout.Label("🗺️ Sélection de la map");
+        string[] mapPaths = Directory.GetFiles(Application.dataPath + "/MapExports", "*.json");
+        mapScroll = GUILayout.BeginScrollView(mapScroll, GUILayout.Height(200));
+        foreach (string path in mapPaths)
+        {
+            string fileName = Path.GetFileName(path);
+            if (GUILayout.Button(fileName))
+            {
+                selectedMapPath = path;
+                LoadMapFromPath(selectedMapPath);
+            }
+        }
+        GUILayout.EndScrollView();
+        GUILayout.Label("Map sélectionnée :");
+        GUILayout.Label(Path.GetFileName(selectedMapPath));
+        GUILayout.EndArea();
+
+        // ✅ Interface de droite
+        Color originalColor = GUI.backgroundColor;
+        GUI.backgroundColor = new Color(0f, 0f, 0f, 0.6f);
         GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
         panelStyle.normal.textColor = Color.white;
         panelStyle.fontSize = 14;
@@ -42,15 +93,12 @@ public class UltimateRuntimeEditor : MonoBehaviour
         panelStyle.padding = new RectOffset(10, 10, 10, 10);
 
         GUILayout.BeginArea(new Rect(Screen.width - 270, 10, 260, 850), panelStyle);
-
         GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
         titleStyle.fontStyle = FontStyle.Bold;
         titleStyle.fontSize = 16;
         GUILayout.Label("Ultimate Runtime Editor", titleStyle);
-
         GUILayout.Space(5);
         GUILayout.Label("📐 Polygon Tools");
-
         if (GUILayout.Button("↩️ Undo")) UndoLast();
         if (GUILayout.Button("💾 Sauvegarder")) SavePolygon();
         if (GUILayout.Button("📂 Charger")) LoadPolygon();
@@ -61,7 +109,6 @@ public class UltimateRuntimeEditor : MonoBehaviour
         if (GUILayout.Button("🔵 Cyan")) ChangeColor(Color.cyan);
         if (GUILayout.Button("🟢 Vert")) ChangeColor(Color.green);
         if (GUILayout.Button("🔴 Rouge")) ChangeColor(Color.red);
-
         if (GUILayout.Button("💾 Exporter Map JSON")) ExportMapData();
 
         GUILayout.Space(10);
@@ -72,7 +119,6 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
         GUILayout.Space(10);
         if (GUILayout.Button("🖼️ Export PNG")) ExportPNG();
-
         if (GUILayout.Button("🛠 Generate Game Folder"))
         {
             if (generator != null)
@@ -83,7 +129,7 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
         GUILayout.EndArea();
 
-        // ✅ 3. Infos clavier en bas à gauche
+        // ✅ Infos clavier
         GUIStyle tipStyle = new GUIStyle(GUI.skin.label);
         tipStyle.normal.textColor = Color.white;
         tipStyle.fontSize = 12;
@@ -95,6 +141,7 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
         GUI.backgroundColor = originalColor;
     }
+
 
 
     [System.Serializable]
@@ -125,12 +172,19 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
         Debug.Log("✅ Export JSON sauvegardé : " + path);
     }
+    private bool isPreviewMode = false;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.KeypadMultiply))
+        isPreviewMode = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+
+        if (isPreviewMode)
         {
-            showConsole = !showConsole;
+            GUIElementsVisible = false;
+        }
+        else
+        {
+            GUIElementsVisible = true;
         }
     }
 
@@ -213,10 +267,19 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void Start()
     {
-    
+        string exportPath = Application.dataPath + "/MapExports";
+        if (!Directory.Exists(exportPath))
+        {
+            Directory.CreateDirectory(exportPath);
+            Debug.Log("📁 Dossier MapExports créé automatiquement : " + exportPath);
+        }
+        Screen.SetResolution(1980, 1080, false);
+
         Debug.Log("Dossier de génération : " + Application.persistentDataPath);
 
         generator = FindObjectOfType<GenerateGameFolder>();
+        Camera.main.transform.position = new Vector3(9.9f, 10.8f, -10f); // pour 2D
+        Camera.main.orthographicSize = 5.4f; // ou la taille exacte selon la résolution cible
 
 
         // 🔥 Supprime le point (0,0) s’il est tout seul
@@ -226,13 +289,15 @@ public class UltimateRuntimeEditor : MonoBehaviour
             Debug.Log("🧹 Point (0,0) retiré à l'initialisation.");
         }
   
-        Camera.main.orthographicSize = 116.86f;
+        Camera.main.orthographicSize = 5.9f;
     }
     void HandlePan()
     {
         if (Input.GetMouseButtonDown(2))
         {
-            dragOrigin = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 correctedMouse = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
+            Vector2 worldPos = Camera.main.ScreenToWorldPoint(correctedMouse);
+
             dragging = true;
         }
         if (Input.GetMouseButton(2) && dragging)
@@ -245,34 +310,31 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void HandleAddPoint()
     {
-        // Ne rien faire si la souris est sur un élément GUI (console, panel, etc.)
         if (UnityEngine.EventSystems.EventSystem.current != null &&
             UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-        {
             return;
+
+        // Empêche le clic si la souris est dans la zone GUI de droite
+        Rect panelRect = new Rect(Screen.width - 270, 10, 260, 850);
+        if (IsMouseOverGUIRect(panelRect))
+            return;
+
+        // Empêche le clic si la souris est dans la console
+        if (showConsole)
+        {
+            Rect consoleRect = new Rect(10, Screen.height - 150, 610, 150);
+            if (IsMouseOverGUIRect(consoleRect))
+                return;
         }
 
-        // Empêche le clic s’il est dans la zone GUI à droite
-        if (Input.mousePosition.x > Screen.width - 270)
-        {
-            return;
-        }
-
-        // Empêche le clic si la console est ouverte et la souris dans sa zone
-        if (showConsole &&
-            Input.mousePosition.x < 610 && Input.mousePosition.y < 150)
-        {
-            return;
-        }
-
-        // Clic gauche pour ajouter un point
         if (Input.GetMouseButtonDown(0))
         {
-            Vector2 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            currentPolygon.Add(mouseWorld);
-            Debug.Log("🟢 Point ajouté: " + mouseWorld);
+            Vector2 worldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            currentPolygon.Add(worldPos);
+            Debug.Log("🟢 Point ajouté: " + worldPos);
         }
     }
+
 
 
     void HandleKeyboardShortcuts()
@@ -564,5 +626,26 @@ public class UltimateRuntimeEditor : MonoBehaviour
         polygonColor = newColor;
         Debug.Log("🎨 Couleur changée en : " + newColor);
     }
+    private void LoadMapFromPath(string path)
+    {
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            PolygonData data = JsonUtility.FromJson<PolygonData>(json);
+            currentPolygon = new List<Vector2>(data.points);
 
+            string mapName = Path.GetFileNameWithoutExtension(path);
+            MapBackground bg = FindObjectOfType<MapBackground>();
+            if (bg != null)
+            {
+                bg.LoadMapSprite(mapName);
+            }
+
+            Debug.Log("📂 Map chargée depuis : " + path);
+        }
+        else
+        {
+            Debug.LogWarning("❌ Fichier de map introuvable : " + path);
+        }
+    }
 }

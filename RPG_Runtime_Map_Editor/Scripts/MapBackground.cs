@@ -1,30 +1,63 @@
 using UnityEngine;
+using System.IO;
 
 [RequireComponent(typeof(SpriteRenderer))]
 public class MapBackground : MonoBehaviour
 {
-    public Sprite mapImage;
+    public string currentMapName;
+    public Sprite fallbackSprite;
+
+    private const float pixelsPerUnit = 100f;
 
     void Start()
     {
-        if (mapImage != null)
+        LoadMapSprite(currentMapName);
+    }
+
+    public void LoadMapSprite(string mapName)
+    {
+        string fullPath = Path.Combine(Application.dataPath, "Maps", mapName + ".png");
+
+        if (!File.Exists(fullPath))
         {
-            var sr = GetComponent<SpriteRenderer>();
-            sr.sprite = mapImage;
-
-            // On force l'échelle pour correspondre à 1980x1080
-            float pixelsPerUnit = mapImage.pixelsPerUnit; // normalement 100
-            float unitWidth = mapImage.texture.width / pixelsPerUnit;
-            float unitHeight = mapImage.texture.height / pixelsPerUnit;
-
-            transform.localScale = new Vector3(1, 1, 1); // on garde l'échelle à 1 (pas besoin d’adapter)
-
-            // Centrage optionnel si nécessaire
-            transform.position = new Vector3(unitWidth / 2f, unitHeight / 2f, 0f);
+            Debug.LogWarning("🧱 Image introuvable : " + fullPath);
+            if (fallbackSprite != null)
+                GetComponent<SpriteRenderer>().sprite = fallbackSprite;
+            return;
         }
-        else
+
+        try
         {
-            Debug.LogError("🧱 Aucun sprite de map assigné !");
+            byte[] imageData = File.ReadAllBytes(fullPath);
+            Texture2D tex = new Texture2D(2, 2);
+            tex.LoadImage(imageData);
+
+            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0f), pixelsPerUnit);
+            var sr = GetComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+
+            transform.localScale = Vector3.one;
+
+            // ✅ Positionne le coin bas-gauche en (0,0)
+            float mapWidth = tex.width / pixelsPerUnit;
+            float mapHeight = tex.height / pixelsPerUnit;
+            transform.position = new Vector3(mapWidth / 2f, mapHeight / 2f, 0f);
+
+            // ✅ Caméra forcée à Y = 10.8
+            if (Camera.main != null)
+            {
+                Camera.main.orthographic = true;
+                Camera.main.orthographicSize = mapHeight / 2f;
+                Camera.main.transform.position = new Vector3(mapWidth / 2f, 10.8f, -10f);
+            }
+
+            Debug.Log($"🖼️ Map chargée : {mapName} | Pos caméra Y = 10.8");
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError("⚠️ Erreur lors du chargement : " + ex.Message);
+            if (fallbackSprite != null)
+                GetComponent<SpriteRenderer>().sprite = fallbackSprite;
         }
     }
 }
