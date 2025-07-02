@@ -1,6 +1,7 @@
 # 🧩 Ultimate Runtime RPG Editor
 
 Un éditeur **Unity 2D** complet intégré **dans le runtime** du jeu, permettant la création de **PolygonCollider2D**, le **spawn de joueur RPG**, l'**exportation JSON**, et l’analyse visuelle des zones de déplacement à partir d’une **image de map**.
+![image](https://github.com/user-attachments/assets/f0841dae-01d5-45a4-b13c-8478ccc35285)
 
 ## 🎮 Fonctionnalités
 
