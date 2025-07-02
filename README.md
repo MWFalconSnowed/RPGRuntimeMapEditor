@@ -1,50 +1,72 @@
-# RPG Runtime Map Editor 🧩✨(WIP)
+# 🧩 Ultimate Runtime RPG Editor
 
-Un éditeur de carte **intégré au runtime** dans Unity, inspiré des anciens éditeurs à la RPG Maker — mais avec une touche moderne, sombre et immersive.
+Un éditeur **Unity 2D** complet intégré **dans le runtime** du jeu, permettant la création de **PolygonCollider2D**, le **spawn de joueur RPG**, l'**exportation JSON**, et l’analyse visuelle des zones de déplacement à partir d’une **image de map**.
+
+## 🎮 Fonctionnalités
+
+### ✅ Éditeur de polygones en jeu
+- Ajout de points avec la souris (zoom, pan, undo).
+- Génération de colliders `PolygonCollider2D` dynamiquement.
+- Détection automatique des zones jouables à partir d’une texture (auto-polygone).
+- Visualisation avancée des colliders avec `PolygonColliderVisualizer`.
+
+### 🧠 Analyseur et simplificateur
+- Simplification via l’algorithme de **Douglas-Peucker**.
+- Génération multiple à partir d’une texture (zones logiques).
+
+### 👤 Système RPG intégré
+- Composant `RPGPlayer` mobile avec Rigidbody2D.
+- `PlayerSpawnerManager` pour instancier dynamiquement le joueur.
+- `PlayerAnimator` pour gérer les frames animées (spritesheet).
+- `MapBackground` pour charger une map PNG à l’échelle avec caméra auto-alignée.
+
+### 🔧 Console en jeu
+Tapez les commandes dans le `Console GUI` :
+```
+>spawn player
+>export json
+>clear poly
+>zoom 3.5
+>color red
+```
+
+### 🗂️ Structure des fichiers
+```
+Assets/
+├── Scripts/
+│   ├── UltimateRuntimeEditor.cs       # Éditeur principal avec auto génération
+│   ├── PolygonAnalyzer.cs             # Simplification et analyse
+│   ├── PolygonColliderVisualizer.cs   # Visualisation des colliders
+│   ├── PolygonExtendedFeatures.cs     # Outils avancés (jitter, rotation, etc.)
+│   ├── PolygonMetaTagger.cs           # Marqueurs logiques (ex: zone piège)
+│   ├── RPGPlayer.cs                   # Contrôleur RPG simple
+│   ├── PlayerSpawner.cs               # Script de spawn
+│   ├── PlayerSpawnerManager.cs        # Gestion centralisée
+│   ├── PlayerAnimator.cs              # Animation simple (spritesheet)
+│   └── MapBackground.cs               # Charge une image de map 1980x1080
+```
+
+## 🔁 Exportation & JSON
+- L’éditeur permet d’exporter la carte et ses polygones dans un fichier `polygon_data.json`.
+- Les données peuvent être utilisées pour le **pathfinding, la collision, ou le level design**.
+
+## 📸 Exemple d'utilisation
+1. Chargez une map `.png` (MAP001).
+2. Cliquez pour créer un polygone autour d’un obstacle.
+3. Tapez `>spawn player` pour tester la navigation.
+4. Cliquez sur `export` pour enregistrer les données.
+
+## 🧪 Extensions prévues
+- Système de couches logiques (`Sol`, `Obstacle`, `Trigger`).
+- Importation de données JSON dans le build principal.
+- Génération de pathfinding walkable grid.
 
 ---
 
-## ✨ Fonctionnalités
+## 🚀 Dépendances
+- Unity 2020+ (testé sur 2022.3)
+- Aucun package externe requis
+- Compatible build `.exe` (standalone Windows)
 
-- 🎮 **Éditeur intégré dans le build** `.exe`, pas besoin de rester dans l'éditeur Unity.
-- 🧱 **Dessin de colliders polygonaux** avec clic gauche/droit.
-- 🧙 **Spawn de joueur** avec stats RPG (attaque, défense, mana, etc).
-- 🎨 **GUI Dark Mode Glass** immersif avec HUD stylisé.
-- 🗺️ Compatible avec des maps 1980x1080 en pixel art.
-- 🖱️ Contrôles simples et accessibles :
-  - Clic gauche : dessiner un point de polygone
-  - Clic droit : fermer le polygone
-  - Bouton "Spawn Player" : faire apparaître un joueur dans la scène
-
----
-![{E9205E5F-01D4-461E-B9F6-C71AC0E3C9FF}](https://github.com/user-attachments/assets/d6adc740-7348-41f7-b831-711d4db90358)
-
-
-## 🏁 Démarrage rapide
-
-1. Ouvrir le projet Unity (`2019.4.40f1` recommandé)
-2. Ouvrir `SampleScene` et cliquer sur ▶️ **Play**
-3. Dans la scène :
-   - Utilisez l’outil GUI pour créer des colliders.
-   - Cliquez sur "Spawn Player" pour tester l’apparition du joueur.
-
----
-
-## 📁 Structure des scripts
-
-- `PolygonEditorRuntimeGUI.cs` – gestion des colliders et de l’éditeur visuel
-- `PlayerPanelRuntime.cs` – HUD RPG avec bouton de spawn
-- `RPGPlayer.cs` – gestion du joueur et de ses stats
-- `PolygonColliderGizmos.cs` – dessin des colliders avec Gizmos
-
----
-
-## 🔒 Licence
-
-Ce projet est open-source sous licence MIT.
-
----
-
-## 👤 Auteur
-
-**MWFalconSnowed** – Développeur solo Unity | Projet RPG immersif
+## 🧙‍♂️ Auteur
+Projet imaginé par **Maëlik**, un dev solo 🔥 passionné par les jeux évolutifs, la simulation atomique, et la magie interactive.
