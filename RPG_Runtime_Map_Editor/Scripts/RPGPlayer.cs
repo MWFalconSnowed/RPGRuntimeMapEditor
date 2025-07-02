@@ -1,23 +1,41 @@
+
 using UnityEngine;
 
 public class RPGPlayer : MonoBehaviour
 {
-    public int health;
-    public int mana;
-    public int attack;
-    public int defense;
+    public string playerName = "Hero";
+    public int hp = 100;
+    public int mp = 50;
+    public int level = 1;
+    public int strength = 10;
+    public int defense = 5;
 
-    private void OnGUI()
+    private Rigidbody2D rb;
+    public float moveSpeed = 6f; // Plus rapide
+
+    void Start()
     {
-        Vector3 screenPos = Camera.main.WorldToScreenPoint(transform.position);
-        GUI.Label(new Rect(screenPos.x - 40, Screen.height - screenPos.y - 60, 120, 20),
-            $"❤️ {health} | ✨ {mana}");
+        rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody2D>();
+        }
+        rb.gravityScale = 0f;
+        rb.constraints = RigidbodyConstraints2D.FreezeRotation;
+
+        if (GetComponent<BoxCollider2D>() == null && GetComponent<CircleCollider2D>() == null)
+        {
+            gameObject.AddComponent<CircleCollider2D>();
+        }
+
+        Debug.Log("Player spawned: " + playerName);
     }
 
-    private void Update()
+    void FixedUpdate()
     {
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
-        transform.position += new Vector3(h, v, 0) * Time.deltaTime * 5f;
+        Vector2 move = new Vector2(h, v).normalized;
+        rb.MovePosition(rb.position + move * moveSpeed * Time.fixedDeltaTime);
     }
 }

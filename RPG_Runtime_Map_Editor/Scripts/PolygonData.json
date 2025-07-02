@@ -1,0 +1,34 @@
+using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
+
+[System.Serializable]
+public class PolygonData
+{
+    public List<Vector2> points = new List<Vector2>();
+}
+
+void SavePolygon()
+{
+    PolygonData data = new PolygonData { points = currentPolygon };
+    string json = JsonUtility.ToJson(data, true);
+    string path = Path.Combine(Application.persistentDataPath, "polygon_data.json");
+    File.WriteAllText(path, json);
+    Debug.Log("💾 Polygon saved to: " + path);
+}
+
+void LoadPolygon()
+{
+    string path = Path.Combine(Application.persistentDataPath, "polygon_data.json");
+    if (File.Exists(path))
+    {
+        string json = File.ReadAllText(path);
+        PolygonData data = JsonUtility.FromJson<PolygonData>(json);
+        currentPolygon = data.points;
+        Debug.Log("📂 Polygon loaded from: " + path);
+    }
+    else
+    {
+        Debug.LogWarning("❌ No polygon file found at " + path);
+    }
+}
