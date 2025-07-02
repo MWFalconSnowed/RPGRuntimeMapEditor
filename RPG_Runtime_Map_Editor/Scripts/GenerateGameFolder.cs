@@ -33,7 +33,9 @@ public class GenerateGameFolder : MonoBehaviour
 
     public void Generate()
     {
-        string basePath = Path.Combine(Application.persistentDataPath, "GeneratedGame");
+        string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+        string basePath = Path.Combine(desktopPath, "GeneratedGame");
+
         string mapDir = Path.Combine(basePath, "Maps");
         string prefabDir = Path.Combine(basePath, "Prefabs");
         string resDir = Path.Combine(basePath, "Resources");
@@ -50,7 +52,7 @@ public class GenerateGameFolder : MonoBehaviour
             MapExportData data = new MapExportData();
             data.polygonPoints.AddRange(poly.points);
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(Path.Combine(mapDir, "MAP001.json"), json);
+            File.WriteAllText(Path.Combine(mapDir, "polygon_data.json"), json);
         }
 
         // Save screenshot
@@ -64,18 +66,21 @@ public class GenerateGameFolder : MonoBehaviour
         string prefabNote = playerPrefab != null ? playerPrefab.name : "No PlayerPrefab Assigned";
         File.WriteAllText(Path.Combine(prefabDir, "PlayerPrefab.txt"), "Use prefab: " + prefabNote);
 
-        // Save player stats
-        if (playerStatsRef != null)
+        var player = FindObjectOfType<RPGPlayer>();
+        if (player != null)
         {
-            RPGStats stats = new RPGStats
-            {
-                level = playerStatsRef.level,
-                health = playerStatsRef.health,
-                mana = playerStatsRef.mana,
-                stamina = playerStatsRef.stamina
-            };
-            File.WriteAllText(Path.Combine(basePath, "RPGPlayerStats.json"), JsonUtility.ToJson(stats, true));
+            string statsDir = Path.Combine(basePath, "Stats");
+            Directory.CreateDirectory(statsDir);
+
+            File.WriteAllText(Path.Combine(statsDir, "PlayerStats.txt"),
+                "👤 Name: " + player.playerName + "\n" +
+                "❤️ HP: " + player.hp + "\n" +
+                "🔷 MP: " + player.mp + "\n" +
+                "⭐ Level: " + player.level + "\n" +
+                "💪 Strength: " + player.strength + "\n" +
+                "🛡️ Defense: " + player.defense + "\n");
         }
+
 
         // Metadata
         GameMetadata meta = new GameMetadata

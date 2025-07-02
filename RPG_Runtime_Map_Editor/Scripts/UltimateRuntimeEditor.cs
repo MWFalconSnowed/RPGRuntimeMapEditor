@@ -25,6 +25,13 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void OnGUI()
     {
+        // ✅ 1. Console affichée en bas si activée
+        if (showConsole)
+        {
+            DrawConsole();
+        }
+
+        // ✅ 2. Interface principale à droite
         Color originalColor = GUI.backgroundColor;
         GUI.backgroundColor = new Color(0f, 0f, 0f, 0.6f); // verre noir semi-transparent
 
@@ -41,10 +48,9 @@ public class UltimateRuntimeEditor : MonoBehaviour
         titleStyle.fontSize = 16;
         GUILayout.Label("Ultimate Runtime Editor", titleStyle);
 
-
         GUILayout.Space(5);
         GUILayout.Label("📐 Polygon Tools");
-        if (GUILayout.Button("⭘ Générer Cercle")) DrawCirclePoints();
+
         if (GUILayout.Button("↩️ Undo")) UndoLast();
         if (GUILayout.Button("💾 Sauvegarder")) SavePolygon();
         if (GUILayout.Button("📂 Charger")) LoadPolygon();
@@ -55,17 +61,8 @@ public class UltimateRuntimeEditor : MonoBehaviour
         if (GUILayout.Button("🔵 Cyan")) ChangeColor(Color.cyan);
         if (GUILayout.Button("🟢 Vert")) ChangeColor(Color.green);
         if (GUILayout.Button("🔴 Rouge")) ChangeColor(Color.red);
-        if (GUILayout.Button("💾 Exporter Map JSON"))
-        {
-            ExportMapData();
-        }
 
-        GUILayout.Space(10);
-        GUILayout.Label("🔧 Transformations");
-        if (GUILayout.Button("🎯 Centrer")) extended.CenterPolygon();
-        if (GUILayout.Button("📐 Scale x2")) extended.ScalePolygon(2f);
-        if (GUILayout.Button("🔄 Rotate 45°")) extended.RotatePolygon(45f);
-        if (GUILayout.Button("🌪️ Jitter")) extended.JitterPolygon(0.5f);
+        if (GUILayout.Button("💾 Exporter Map JSON")) ExportMapData();
 
         GUILayout.Space(10);
         GUILayout.Label("🧍 Spawn Joueur");
@@ -76,20 +73,6 @@ public class UltimateRuntimeEditor : MonoBehaviour
         GUILayout.Space(10);
         if (GUILayout.Button("🖼️ Export PNG")) ExportPNG();
 
-       
-        GUI.backgroundColor = originalColor;
-        GUI.skin.button.fontSize = 13;
-        GUI.skin.box.normal.textColor = Color.white;
-        GUI.skin.button.normal.textColor = Color.white;
-        // Infos en bas à gauche
-        GUIStyle tipStyle = new GUIStyle(GUI.skin.label);
-        tipStyle.normal.textColor = Color.white;
-        tipStyle.fontSize = 12;
-        GUI.Label(new Rect(10, Screen.height - 80, 400, 80),
-            "🖱️ Clic gauche = Ajouter point\n" +
-            "🔄 Molette = Zoom\n" +
-            "✋ Clic milieu = Drag\n" +
-            "⌫ Backspace = Undo", tipStyle);
         if (GUILayout.Button("🛠 Generate Game Folder"))
         {
             if (generator != null)
@@ -97,8 +80,20 @@ public class UltimateRuntimeEditor : MonoBehaviour
             else
                 Debug.LogWarning("⛔ Aucun composant GenerateGameFolder trouvé !");
         }
+
         GUILayout.EndArea();
-      
+
+        // ✅ 3. Infos clavier en bas à gauche
+        GUIStyle tipStyle = new GUIStyle(GUI.skin.label);
+        tipStyle.normal.textColor = Color.white;
+        tipStyle.fontSize = 12;
+        GUI.Label(new Rect(10, Screen.height - 250, 850, 80),
+            "🖱️ Clic gauche = Ajouter point\n" +
+            "🔄 Molette = Zoom\n" +
+            "✋ Clic milieu = Drag\n" +
+            "⌫ Backspace = Undo", tipStyle);
+
+        GUI.backgroundColor = originalColor;
     }
 
 
@@ -131,6 +126,14 @@ public class UltimateRuntimeEditor : MonoBehaviour
         Debug.Log("✅ Export JSON sauvegardé : " + path);
     }
 
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.KeypadMultiply))
+        {
+            showConsole = !showConsole;
+        }
+    }
+
     void LateUpdate()
     {
         HandleZoom();
@@ -138,6 +141,7 @@ public class UltimateRuntimeEditor : MonoBehaviour
         HandleAddPoint();
         HandleKeyboardShortcuts();
     }
+
     void SpawnPlayerOutsidePolygon()
     {
         if (playerPrefab == null)
@@ -209,9 +213,19 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void Start()
     {
+    
         Debug.Log("Dossier de génération : " + Application.persistentDataPath);
 
         generator = FindObjectOfType<GenerateGameFolder>();
+
+
+        // 🔥 Supprime le point (0,0) s’il est tout seul
+        if (currentPolygon.Count == 1 && currentPolygon[0] == Vector2.zero)
+        {
+            currentPolygon.Clear();
+            Debug.Log("🧹 Point (0,0) retiré à l'initialisation.");
+        }
+  
         Camera.main.orthographicSize = 116.86f;
     }
     void HandlePan()
@@ -231,13 +245,35 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void HandleAddPoint()
     {
-        if (Input.GetMouseButtonDown(0) && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+        // Ne rien faire si la souris est sur un élément GUI (console, panel, etc.)
+        if (UnityEngine.EventSystems.EventSystem.current != null &&
+            UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+        {
+            return;
+        }
+
+        // Empêche le clic s’il est dans la zone GUI à droite
+        if (Input.mousePosition.x > Screen.width - 270)
+        {
+            return;
+        }
+
+        // Empêche le clic si la console est ouverte et la souris dans sa zone
+        if (showConsole &&
+            Input.mousePosition.x < 610 && Input.mousePosition.y < 150)
+        {
+            return;
+        }
+
+        // Clic gauche pour ajouter un point
+        if (Input.GetMouseButtonDown(0))
         {
             Vector2 mouseWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             currentPolygon.Add(mouseWorld);
             Debug.Log("🟢 Point ajouté: " + mouseWorld);
         }
     }
+
 
     void HandleKeyboardShortcuts()
     {
@@ -356,6 +392,172 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
 
     }
+    private string consoleInput = "";
+    private List<string> logHistory = new List<string>();
+    private bool showConsole = false;
+
+    void DrawConsole()
+    {
+        GUILayout.BeginArea(new Rect(10, Screen.height - 140, 600, 130), GUI.skin.box);
+        GUILayout.Label("🎮 Console de l'éditeur");
+
+        GUILayout.TextArea(string.Join("\n", logHistory), GUILayout.Height(80));
+
+        GUI.SetNextControlName("ConsoleInput");
+        consoleInput = GUILayout.TextField(consoleInput);
+        GUI.FocusControl("ConsoleInput");
+
+
+        GUILayout.EndArea();
+    }
+
+    public void AutoPolygonGenerator(Texture2D edgeImage, float alphaThreshold = 0.1f)
+    {
+        int width = edgeImage.width;
+        int height = edgeImage.height;
+
+        Color[] pixels = edgeImage.GetPixels();
+        List<List<Vector2>> detectedPolygons = new List<List<Vector2>>();
+
+        bool[,] visited = new bool[width, height];
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (visited[x, y]) continue;
+
+                Color pixel = pixels[y * width + x];
+                if (pixel.grayscale < alphaThreshold) continue;
+
+                List<Vector2> region = ExtractRegion(pixels, visited, width, height, x, y, alphaThreshold);
+
+                if (region.Count > 20)
+                {
+                    List<Vector2> simplified = SimplifyPolygon(region, 2f);
+                    detectedPolygons.Add(simplified);
+                }
+            }
+        }
+
+        foreach (var poly in detectedPolygons)
+        {
+            GameObject obj = new GameObject("GeneratedCollider");
+            var col = obj.AddComponent<PolygonCollider2D>();
+            col.points = poly.ToArray();
+            obj.transform.parent = this.transform;
+        }
+
+        Debug.Log("✅ AutoPolygonGenerator terminé : " + detectedPolygons.Count + " polygones détectés.");
+    }
+
+    private List<Vector2> ExtractRegion(Color[] pixels, bool[,] visited, int width, int height, int startX, int startY, float threshold)
+    {
+        List<Vector2> region = new List<Vector2>();
+        Queue<Vector2Int> queue = new Queue<Vector2Int>();
+        queue.Enqueue(new Vector2Int(startX, startY));
+        visited[startX, startY] = true;
+
+        while (queue.Count > 0)
+        {
+            Vector2Int current = queue.Dequeue();
+            region.Add(new Vector2(current.x, current.y));
+
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    int nx = current.x + dx;
+                    int ny = current.y + dy;
+
+                    if (nx >= 0 && ny >= 0 && nx < width && ny < height && !visited[nx, ny])
+                    {
+                        Color neighborPixel = pixels[ny * width + nx];
+                        if (neighborPixel.grayscale >= threshold)
+                        {
+                            visited[nx, ny] = true;
+                            queue.Enqueue(new Vector2Int(nx, ny));
+                        }
+                    }
+                }
+            }
+        }
+
+        return region;
+    }
+
+    private List<Vector2> SimplifyPolygon(List<Vector2> points, float tolerance)
+    {
+        if (points == null || points.Count < 3)
+            return new List<Vector2>(points);
+
+        return DouglasPeucker(points, tolerance);
+    }
+
+    private List<Vector2> DouglasPeucker(List<Vector2> points, float tolerance)
+    {
+        if (points.Count < 3)
+            return new List<Vector2>(points);
+
+        int index = -1;
+        float maxDist = 0f;
+
+        for (int i = 1; i < points.Count - 1; i++)
+        {
+            float dist = PerpendicularDistance(points[i], points[0], points[points.Count - 1]);
+            if (dist > maxDist)
+            {
+                maxDist = dist;
+                index = i;
+            }
+        }
+
+        if (maxDist > tolerance)
+        {
+            List<Vector2> left = DouglasPeucker(points.GetRange(0, index + 1), tolerance);
+            List<Vector2> right = DouglasPeucker(points.GetRange(index, points.Count - index), tolerance);
+            left.RemoveAt(left.Count - 1);
+            left.AddRange(right);
+            return left;
+        }
+        else
+        {
+            return new List<Vector2> { points[0], points[points.Count - 1] };
+        }
+    }
+
+    private float PerpendicularDistance(Vector2 pt, Vector2 lineStart, Vector2 lineEnd)
+    {
+        float dx = lineEnd.x - lineStart.x;
+        float dy = lineEnd.y - lineStart.y;
+
+        if (dx == 0f && dy == 0f)
+            return Vector2.Distance(pt, lineStart);
+
+        float t = ((pt.x - lineStart.x) * dx + (pt.y - lineStart.y) * dy) / (dx * dx + dy * dy);
+        Vector2 projection = new Vector2(lineStart.x + t * dx, lineStart.y + t * dy);
+        return Vector2.Distance(pt, projection);
+    }
+
+
+
+
+    void RunConsoleCommand(string cmd)
+    {
+        logHistory.Add("> " + cmd);
+
+        if (cmd.StartsWith(">help")) { /* Show help */ }
+        else if (cmd.StartsWith(">spawn player")) SpawnPlayerOutsidePolygon();
+        else if (cmd.StartsWith(">export json")) ExportMapData();
+        else if (cmd.StartsWith(">clear poly")) currentPolygon.Clear();
+        else if (cmd.StartsWith(">color red")) ChangeColor(Color.red);
+        else if (cmd.StartsWith(">zoom "))
+        {
+            if (float.TryParse(cmd.Substring(6), out float zoomVal))
+                Camera.main.orthographicSize = zoomVal;
+        }
+        else logHistory.Add("Commande inconnue !");
+    }
 
     void ChangeColor(Color newColor)
     {
@@ -363,5 +565,4 @@ public class UltimateRuntimeEditor : MonoBehaviour
         Debug.Log("🎨 Couleur changée en : " + newColor);
     }
 
-  
 }
