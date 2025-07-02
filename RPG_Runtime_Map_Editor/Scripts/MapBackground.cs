@@ -4,7 +4,9 @@ using System.IO;
 [RequireComponent(typeof(SpriteRenderer))]
 public class MapBackground : MonoBehaviour
 {
+    [Tooltip("Nom de la map sans extension, exemple 'MAP001'")]
     public string currentMapName;
+
     public Sprite fallbackSprite;
 
     private const float pixelsPerUnit = 100f;
@@ -16,11 +18,11 @@ public class MapBackground : MonoBehaviour
 
     public void LoadMapSprite(string mapName)
     {
-        string fullPath = Path.Combine(Application.dataPath, "Maps", mapName + ".png");
+        string fullPath = Path.Combine(Application.streamingAssetsPath, "Maps", mapName + ".png");
 
         if (!File.Exists(fullPath))
         {
-            Debug.LogWarning("🧱 Image introuvable : " + fullPath);
+            Debug.LogWarning($"🧱 Image introuvable dans StreamingAssets : {fullPath}");
             if (fallbackSprite != null)
                 GetComponent<SpriteRenderer>().sprite = fallbackSprite;
             return;
@@ -38,24 +40,24 @@ public class MapBackground : MonoBehaviour
 
             transform.localScale = Vector3.one;
 
-            // ✅ Positionne le coin bas-gauche en (0,0)
-            float mapWidth = tex.width / pixelsPerUnit;
-            float mapHeight = tex.height / pixelsPerUnit;
-            transform.position = new Vector3(mapWidth / 2f, mapHeight / 2f, 0f);
+            // Centre la map sur la caméra
+            float mapWidthUnits = tex.width / pixelsPerUnit;
+            float mapHeightUnits = tex.height / pixelsPerUnit;
+            transform.position = new Vector3(mapWidthUnits / 2f, mapHeightUnits / 2f, 0f);
 
-            // ✅ Caméra forcée à Y = 10.8
+            // Configure caméra orthographique
             if (Camera.main != null)
             {
                 Camera.main.orthographic = true;
-                Camera.main.orthographicSize = mapHeight / 2f;
-                Camera.main.transform.position = new Vector3(mapWidth / 2f, 10.8f, -10f);
+                Camera.main.orthographicSize = mapHeightUnits / 2f;
+                Camera.main.transform.position = new Vector3(mapWidthUnits / 2f, mapHeightUnits / 2f, -10f);
             }
 
-            Debug.Log($"🖼️ Map chargée : {mapName} | Pos caméra Y = 10.8");
+            Debug.Log($"🖼️ Map '{mapName}' chargée. Pos: {transform.position}, Taille: {mapWidthUnits}x{mapHeightUnits} unités");
         }
         catch (System.Exception ex)
         {
-            Debug.LogError("⚠️ Erreur lors du chargement : " + ex.Message);
+            Debug.LogError($"⚠️ Erreur chargement map '{mapName}': {ex.Message}");
             if (fallbackSprite != null)
                 GetComponent<SpriteRenderer>().sprite = fallbackSprite;
         }

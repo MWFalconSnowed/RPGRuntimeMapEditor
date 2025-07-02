@@ -33,38 +33,26 @@ public class UltimateRuntimeEditor : MonoBehaviour
 
     void OnGUI()
     {
-        // Corrige le décalage souris GUI dans le build
-        Vector2 guiMouse = Input.mousePosition;
-        guiMouse.y = Screen.height - guiMouse.y; // OnGUI utilise Y inversé
-
-        GUIUtility.ScaleAroundPivot(
-            new Vector2((float)Screen.width / 1980f, (float)Screen.height / 1080f),
-            Vector2.zero
-        );
-GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
-        GUI.matrix = Matrix4x4.identity;
-        // 🔧 Résolution cible fixe (celle de la map, par exemple)
-        Vector2 targetResolution = new Vector2(1980, 1080);
-
-        // 🔄 Matrice de transformation pour corriger le décalage d'écran
-        float scaleX = Screen.width / targetResolution.x;
-        float scaleY = Screen.height / targetResolution.y;
-        GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(scaleX, scaleY, 1f));
         if (isPreviewMode)
         {
-            GUI.color = new Color(1f, 1f, 1f, 0.12f); // Overlay semi-transparent blanc
+            GUI.color = new Color(1f, 1f, 1f, 0.12f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
+        }
+        if (showConsole)
+            DrawConsole();
+
+        if (GUILayout.Button(showConsole ? "🔒 Fermer Console" : "💬 Ouvrir Console"))
+        {
+            showConsole = !showConsole;
         }
 
         if (!GUIElementsVisible)
             return;
 
-        // ✅ 1. Console
         if (showConsole)
             DrawConsole();
 
-        // === Sélecteur de maps ===
         GUILayout.BeginArea(new Rect(10, 10, 240, 300), GUI.skin.box);
         GUILayout.Label("🗺️ Sélection de la map");
         string[] mapPaths = Directory.GetFiles(Application.dataPath + "/MapExports", "*.json");
@@ -83,20 +71,25 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
         GUILayout.Label(Path.GetFileName(selectedMapPath));
         GUILayout.EndArea();
 
-        // ✅ Interface de droite
         Color originalColor = GUI.backgroundColor;
         GUI.backgroundColor = new Color(0f, 0f, 0f, 0.6f);
-        GUIStyle panelStyle = new GUIStyle(GUI.skin.box);
-        panelStyle.normal.textColor = Color.white;
-        panelStyle.fontSize = 14;
-        panelStyle.alignment = TextAnchor.UpperLeft;
-        panelStyle.padding = new RectOffset(10, 10, 10, 10);
+
+        GUIStyle panelStyle = new GUIStyle(GUI.skin.box)
+        {
+            normal = { textColor = Color.white },
+            fontSize = 14,
+            alignment = TextAnchor.UpperLeft,
+            padding = new RectOffset(10, 10, 10, 10)
+        };
 
         GUILayout.BeginArea(new Rect(Screen.width - 270, 10, 260, 850), panelStyle);
-        GUIStyle titleStyle = new GUIStyle(GUI.skin.label);
-        titleStyle.fontStyle = FontStyle.Bold;
-        titleStyle.fontSize = 16;
+        GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontStyle = FontStyle.Bold,
+            fontSize = 16
+        };
         GUILayout.Label("Ultimate Runtime Editor", titleStyle);
+
         GUILayout.Space(5);
         GUILayout.Label("📐 Polygon Tools");
         if (GUILayout.Button("↩️ Undo")) UndoLast();
@@ -129,10 +122,11 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
 
         GUILayout.EndArea();
 
-        // ✅ Infos clavier
-        GUIStyle tipStyle = new GUIStyle(GUI.skin.label);
-        tipStyle.normal.textColor = Color.white;
-        tipStyle.fontSize = 12;
+        GUIStyle tipStyle = new GUIStyle(GUI.skin.label)
+        {
+            normal = { textColor = Color.white },
+            fontSize = 12
+        };
         GUI.Label(new Rect(10, Screen.height - 250, 850, 80),
             "🖱️ Clic gauche = Ajouter point\n" +
             "🔄 Molette = Zoom\n" +
@@ -186,6 +180,12 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
         {
             GUIElementsVisible = true;
         }
+        if (Input.GetKeyDown(KeyCode.KeypadMultiply)); // Touche * du pavé numérique
+    {
+            showConsole = !showConsole;
+        }
+
+        GUIElementsVisible = !showConsole; // 
     }
 
     void LateUpdate()
@@ -204,25 +204,27 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
             return;
         }
 
-        PolygonCollider2D polyCollider = FindObjectOfType<PolygonCollider2D>();
+        PolygonCollider2D polyCollider = FindObjectOfType<PolygonCollider2D>(); // récupère le collider existant
 
         if (polyCollider == null)
         {
-            Debug.LogWarning("❌ PolygonCollider2D manquant sur l'objet détecté.");
+            Debug.LogWarning("❌ PolygonCollider2D manquant.");
             return;
         }
 
-        Vector2 forcedSpawnPos = new Vector2(142.78f, 69.89999f);
+        Vector3 spawnPos = new Vector3(6.78f, 6.97f, 0f);
 
-        if (polyCollider.OverlapPoint(forcedSpawnPos))
+        if (polyCollider.OverlapPoint(spawnPos))
         {
-            Debug.LogWarning("⚠️ La position forcée est à l'intérieur du polygone !");
+            Debug.LogWarning("⚠️ La position de spawn est à l'intérieur du polygone !");
             return;
         }
 
-        Instantiate(playerPrefab, forcedSpawnPos, Quaternion.identity);
-        Debug.Log("🧍 Joueur apparu à la position forcée : " + forcedSpawnPos);
+        GameObject playerInstance = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+        playerInstance.transform.localScale = Vector3.one * 3f;
+        Debug.Log("🧍 Joueur apparu à la position : " + spawnPos);
     }
+
 
 
     void OnPostRender()
@@ -279,9 +281,9 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
 
         generator = FindObjectOfType<GenerateGameFolder>();
         Camera.main.transform.position = new Vector3(9.9f, 10.8f, -10f); // pour 2D
-        Camera.main.orthographicSize = 5.4f; // ou la taille exacte selon la résolution cible
 
 
+        Camera.main.orthographic = true;
         // 🔥 Supprime le point (0,0) s’il est tout seul
         if (currentPolygon.Count == 1 && currentPolygon[0] == Vector2.zero)
         {
@@ -291,22 +293,36 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
   
         Camera.main.orthographicSize = 5.9f;
     }
+    private Vector3 dragOriginWorld;
+
     void HandlePan()
     {
-        if (Input.GetMouseButtonDown(2))
+        if (Input.GetMouseButtonDown(2))  // Clic molette enfoncé
         {
-            Vector2 correctedMouse = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
-            Vector2 worldPos = Camera.main.ScreenToWorldPoint(correctedMouse);
-
+            // Convertit la position souris écran en position monde
+            dragOriginWorld = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             dragging = true;
         }
+
         if (Input.GetMouseButton(2) && dragging)
         {
-            Vector3 difference = dragOrigin - Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Camera.main.transform.position += difference;
+            // Calcul déplacement entre dernière position et actuelle en world space
+            Vector3 currentWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 diff = dragOriginWorld - currentWorldPos;
+
+            // Applique déplacement à la caméra
+            Camera.main.transform.position += diff;
+
+            // Met à jour dragOriginWorld pour le prochain calcul
+            dragOriginWorld = currentWorldPos;
         }
-        if (Input.GetMouseButtonUp(2)) dragging = false;
+
+        if (Input.GetMouseButtonUp(2))
+        {
+            dragging = false;
+        }
     }
+
 
     void HandleAddPoint()
     {
@@ -423,18 +439,21 @@ GUIElementsVisible = GUIElementsVisible && GUIElementsVisible;
 
     void GenerateCollider()
     {
+        GameObject oldCollider = GameObject.Find("GeneratedPolygon");
+        if (oldCollider != null)
+            DestroyImmediate(oldCollider);
+
         GameObject go = new GameObject("GeneratedPolygon");
         var rb = go.AddComponent<Rigidbody2D>();
-        rb.bodyType = RigidbodyType2D.Static; // 🔁 Était en Kinematic
-
-        rb.simulated = true;
+        rb.bodyType = RigidbodyType2D.Static;
 
         PolygonCollider2D collider = go.AddComponent<PolygonCollider2D>();
         collider.points = currentPolygon.ToArray();
-        collider.isTrigger = false; // pour bloquer le joueur
+        collider.isTrigger = false;
 
-        Debug.Log("🧱 PolygonCollider2D created");
+        Debug.Log("🧱 PolygonCollider2D créé");
     }
+
 
     private PolygonExtendedFeatures extended;
     private PolygonAnalyzer analyzer;
